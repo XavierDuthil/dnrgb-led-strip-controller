@@ -11,8 +11,8 @@ const (
 	port string = ":7000"
 
 	// LED strip settings
-	ledCount   = 62
-	brightness = 128
+	ledCount      = 62
+	ledBrightness = 128
 )
 
 func main() {
@@ -30,7 +30,10 @@ func main() {
 	log.Printf("Listening via UDP on %s", udpAddress)
 
 	// Setup LED strip
-	strip := &Strip{}
+	strip := &Strip{
+		ledCount:      ledCount,
+		ledBrightness: ledBrightness,
+	}
 	checkError(strip.setup())
 	checkError(strip.Init())
 	defer strip.Fini()
@@ -39,7 +42,6 @@ func main() {
 	for {
 		msg := server.handleMessage()
 		strip.update(msg)
-		log.Printf("Strip updated with %q", msg)
 	}
 }
 
