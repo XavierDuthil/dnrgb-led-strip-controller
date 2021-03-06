@@ -11,15 +11,15 @@ const (
 	port string = ":7000"
 
 	// LED strip settings
-	ledCounts  = 62
+	ledCount   = 62
 	brightness = 128
 )
 
 func main() {
+	// Setup server
 	udpAddress, err := net.ResolveUDPAddr("udp4", port)
 	checkError(err)
 
-	// Setup server
 	var server Server
 	server.conn, err = net.ListenUDP("udp", udpAddress)
 	checkError(err)
@@ -27,17 +27,19 @@ func main() {
 		fmt.Print("closing")
 		_ = server.conn.Close()
 	}()
+	log.Printf("Listening via UDP on %s", udpAddress)
 
 	// Setup LED strip
 	strip := &Strip{}
-	err = strip.setup()
-	checkError(err)
-
+	checkError(strip.setup())
 	checkError(strip.Init())
 	defer strip.Fini()
 
+	// Handle requests
 	for {
-		strip.update(server.handleMessage())
+		msg := server.handleMessage()
+		strip.update(msg)
+		log.Printf("Strip updated with %q", msg)
 	}
 }
 

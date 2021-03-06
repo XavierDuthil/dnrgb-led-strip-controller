@@ -15,7 +15,7 @@ type Strip struct {
 func (s *Strip) setup() error {
 	opt := ws2811.DefaultOptions
 	opt.Channels[0].Brightness = brightness
-	opt.Channels[0].LedCount = ledCounts
+	opt.Channels[0].LedCount = ledCount
 
 	newStrip, err := ws2811.MakeWS2811(&opt)
 	if err != nil {
@@ -30,12 +30,16 @@ func (s *Strip) update(msg []byte) {
 	msgStr := string(msg)
 	msgLength := len(msgStr)
 	for i := 0; i+6 <= msgLength; i += 6 {
+		ledNum := i / 6
+		if ledNum >= ledCount {
+			break
+		}
+
 		hexInt, err := strconv.ParseInt(msgStr[i:i+6], 16, 64)
 		if err != nil {
 			log.Printf("failed to parse hex value %q: %s", msgStr[i:i+6], err)
 		}
 
-		ledNum := i / 6
 		s.Leds(0)[ledNum] = uint32(hexInt)
 	}
 
