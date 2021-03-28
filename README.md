@@ -27,5 +27,5 @@ go build
 *Note: According to your controller's operating system, you may have to execute this program with admin rights.*
 
 ## Useful links
-- Tutorial to set up a Raspberry Pi for controlling a LED strip: https://tutorials-raspberrypi.com/connect-control-raspberry-pi-ws2812-rgb-led-strips/
+- Tutorial to set up a Raspberry Pi as LED strip controller: https://tutorials-raspberrypi.com/connect-control-raspberry-pi-ws2812-rgb-led-strips/
 - Documentation on the DNRGB protocol: https://github.com/Aircoookie/WLED/wiki/UDP-Realtime-Control
