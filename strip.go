@@ -41,13 +41,6 @@ func (s *Strip) setup() error {
 	return nil
 }
 
-func combineTwoBytes(high, low uint32) uint32 {
-	return (high << 8) | low
-}
-func combineThreeBytes(high uint32, middle uint32, low uint32) uint32 {
-	return (high << 16) | (middle << 8) | low
-}
-
 func (s *Strip) updateDNRGB(msg []byte) {
 	msgLength := uint32(len(msg))
 	ledIndexHigh := uint32(msg[DNRGBStartLedHighByteIndex])
@@ -58,5 +51,19 @@ func (s *Strip) updateDNRGB(msg []byte) {
 		s.Leds(0)[ledIndex] = combineThreeBytes(uint32(msg[i]), uint32(msg[i+1]), uint32(msg[i+2]))
 		ledIndex++
 	}
-	_ = s.Render()
 }
+
+func (s *Strip) renderOnOrder(renderOrders <-chan struct{}) {
+	// Render as fast as possible as long as an order is pending
+	for range renderOrders {
+		_ = s.Render()
+	}
+}
+
+func combineTwoBytes(high, low uint32) uint32 {
+	return (high << 8) | low
+}
+func combineThreeBytes(high uint32, middle uint32, low uint32) uint32 {
+	return (high << 16) | (middle << 8) | low
+}
+
