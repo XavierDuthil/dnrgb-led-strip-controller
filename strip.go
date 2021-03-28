@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	ws2811 "github.com/rpi-ws281x/rpi-ws281x-go"
 )
 
 type Strip struct {
 	ws2811.WS2811
-	ledCount      int
+	ledCount      uint32
 	ledBrightness int
 }
 
@@ -25,13 +24,13 @@ const (
 	// Indexes specific to DNRGB protocol
 	DNRGBStartLedHighByteIndex = 2
 	DNRGBStartLedLowByteIndex  = 3
-	DNRGBLedValuesStartIndex   = 4
+	DNRGBLedValuesStartIndex   = uint32(4)
 )
 
 func (s *Strip) setup() error {
 	opt := ws2811.DefaultOptions
 	opt.Channels[0].Brightness = s.ledBrightness
-	opt.Channels[0].LedCount = s.ledCount
+	opt.Channels[0].LedCount = int(s.ledCount)
 
 	newStrip, err := ws2811.MakeWS2811(&opt)
 	if err != nil {
@@ -42,53 +41,22 @@ func (s *Strip) setup() error {
 	return nil
 }
 
-func determineProtocol(b byte) string {
-	switch b {
-	case '\x04':
-		return DNRGBProtocol
-	default:
-		log.Printf("Unsupported protocol %q", b)
-		return ""
-	}
-}
-
-func combineTwoBytes(high, low uint16) uint16 {
+func combineTwoBytes(high, low uint32) uint32 {
 	return (high << 8) | low
 }
 func combineThreeBytes(high uint32, middle uint32, low uint32) uint32 {
 	return (high << 16) | (middle << 8) | low
 }
 
-func (s *Strip) update(msg []byte) {
-	protocolByte := msg[protocolByteIndex]
-	// TODO: implement flush after timeout
-	//timeoutSecondsByte := msg[timeoutByteIndex]
-
-	protocol := determineProtocol(protocolByte)
-
-	switch protocol {
-	case DNRGBProtocol:
-		s.updateDNRGB(msg)
-	default:
-		log.Printf("Unsupported protocol %q", protocol)
-		return
-	}
-
-	checkError(s.Render())
-}
-
 func (s *Strip) updateDNRGB(msg []byte) {
-	ledIndexHigh := msg[DNRGBStartLedHighByteIndex]
-	ledIndexLow := msg[DNRGBStartLedLowByteIndex]
-	ledStartIndex := combineTwoBytes(uint16(ledIndexHigh), uint16(ledIndexLow))
+	msgLength := uint32(len(msg))
+	ledIndexHigh := uint32(msg[DNRGBStartLedHighByteIndex])
+	ledIndexLow := uint32(msg[DNRGBStartLedLowByteIndex])
+	ledIndex := combineTwoBytes(ledIndexHigh, ledIndexLow)
 
-	for i := uint16(DNRGBLedValuesStartIndex); i+3 <= uint16(len(msg)); i += 3 {
-		ledIndex := ledStartIndex + (i-DNRGBLedValuesStartIndex)/3
-		if ledIndex >= uint16(s.ledCount) {
-			log.Printf("Tried to assign LED #%d which is out of bounds", ledIndex)
-			break
-		}
-
+	for i := DNRGBLedValuesStartIndex; i+3 <= msgLength; i += 3 {
 		s.Leds(0)[ledIndex] = combineThreeBytes(uint32(msg[i]), uint32(msg[i+1]), uint32(msg[i+2]))
+		ledIndex++
 	}
+	_ = s.Render()
 }

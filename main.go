@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 )
 
 const (
 	// Server setting
-	port string = ":7000"
+	port = ":7000"
 
 	// LED strip settings
 	ledCount      = 62
@@ -20,12 +19,11 @@ func main() {
 	udpAddress, err := net.ResolveUDPAddr("udp4", port)
 	checkError(err)
 
-	var server Server
-	server.conn, err = net.ListenUDP("udp", udpAddress)
+	conn, err := net.ListenUDP("udp", udpAddress)
 	checkError(err)
 	defer func() {
-		fmt.Print("closing")
-		_ = server.conn.Close()
+		log.Println("Closing UDP listener")
+		_ = conn.Close()
 	}()
 	log.Printf("Listening via UDP on %s", udpAddress)
 
@@ -38,10 +36,19 @@ func main() {
 	checkError(strip.Init())
 	defer strip.Fini()
 
+	// Maximum size of a message (in bytes) is prefixSize + nbLeds * nbColors
+	//   Where prefixSize = 4 (protocol + ledIndex)
+	//   And   nbColors   = 3 (RGB)
+	var buf [4 + ledCount * 3]byte
+
 	// Handle requests
 	for {
-		msg := server.handleMessage()
-		strip.update(msg)
+		n, _, err := conn.ReadFromUDP(buf[0:])
+		if err != nil {
+			log.Printf("Failed to read from UDP: %s", err)
+			continue
+		}
+		strip.updateDNRGB(buf[0:n])
 	}
 }
 
